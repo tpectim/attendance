@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>班級出缺席點名單 (分科+正圓大頭照版)</title>
+    <style>
+        body {
+            background-color: #f8fafc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, 'Microsoft JhengHei';
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            margin: 0;
+        }
+
+        .header {
+            width: 100%; max-width: 1000px; display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #e2e8f0;
+            flex-wrap: wrap; gap: 15px;
+        }
+        .header h1 { margin: 0; color: #1e293b; font-size: 26px; display: flex; align-items: center; gap: 10px; }
+        
+        .header-controls {
+            display: flex; gap: 15px; align-items: center; flex-wrap: wrap;
+        }
+
+        .btn-outline {
+            background-color: white; border: 2px solid #3b82f6; color: #3b82f6;
+            padding: 8px 16px; border-radius: 8px; font-size: 16px; cursor: pointer;
+            font-weight: bold; transition: all 0.2s; text-decoration: none; display: inline-block;
+        }
+        .btn-outline:hover { background-color: #f0f9ff; transform: translateY(-1px); }
+
+        .date-picker-container {
+            display: flex; align-items: center; gap: 10px; background: white; 
+            padding: 8px 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .date-picker-container label { font-weight: bold; color: #475569; }
+        .date-picker-container input[type="date"] {
+            border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; 
+            font-size: 16px; font-family: inherit; color: #1e293b; outline: none;
+        }
+
+        /* 🌟 新增：科目切換頁籤樣式 */
+        .subject-tabs { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 1000px;}
+        .tab-btn {
+            background-color: white; border: 2px solid transparent; padding: 10px 24px;
+            border-radius: 30px; font-size: 18px; cursor: pointer; color: #475569;
+            font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.05); transition: 0.2s;
+        }
+        .tab-btn:hover { background-color: #f1f5f9; }
+        .tab-btn.active { background-color: #1b8b41; color: white; }
+
+        /* 統計狀態列 */
+        .summary-bar {
+            width: 100%; max-width: 1000px; display: flex; gap: 10px; margin-bottom: 25px;
+            justify-content: center; flex-wrap: wrap; align-items: center;
+        }
+        .summary-item {
+            padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 16px;
+            display: flex; align-items: center; gap: 6px; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .bg-unselected { background-color: #94a3b8; } 
+        .bg-present { background-color: #1b8b41; }    
+        .bg-absent { background-color: #ef4444; }     
+        .bg-late { background-color: #f59e0b; }       
+        .bg-leave { background-color: #3b82f6; }      
+
+        /* 一鍵出席按鈕 */
+        .btn-mark-all {
+            background-color: #1e293b; color: white; border: none; padding: 8px 18px;
+            border-radius: 20px; font-size: 16px; font-weight: bold; cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: 0.2s; margin-left: 10px;
+        }
+        .btn-mark-all:hover { background-color: #0f172a; transform: translateY(-1px); }
+
+        .board { display: flex; flex-wrap: wrap; gap: 25px; justify-content: center; max-width: 1000px; }
+        
+        /* 點名卡片 */
+        .card {
+            background: white; width: 130px; height: 140px; border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06); position: relative;
+            display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+            padding-bottom: 15px; margin-top: 40px; cursor: pointer;
+            user-select: none; -webkit-user-select: none; transition: transform 0.1s, border 0.2s;
+            border: 4px solid transparent; box-sizing: border-box;
+        }
+        .card:active { transform: scale(0.95); }
+
+        /* 正圓形大頭照樣式 */
+        .avatar { 
+            width: 86px; height: 86px; border-radius: 50%; object-fit: cover; object-position: center; 
+            position: absolute; bottom: 80px; pointer-events: none; border: 4px solid white; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: white; z-index: 5;
+        }
+        
+        .placeholder-avatar { 
+            width: 86px; height: 86px; background: #cbd5e1; border-radius: 50%; 
+            position: absolute; bottom: 80px; display: flex; align-items: center; 
+            justify-content: center; font-size: 35px; color: white; pointer-events: none;
+            border: 4px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); z-index: 5;
+        }
+        
+        .name { font-size: 17px; color: #0f172a; font-weight: 600; pointer-events: none; margin-bottom: 8px; z-index: 10;}
+        
+        /* 狀態標籤 */
+        .status-badge {
+            padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold; color: white;
+            pointer-events: none; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card.state-unselected { border-color: #cbd5e1; background-color: #ffffff; }
+        .card.state-unselected .status-badge { background-color: #94a3b8; }
+        .card.state-present { border-color: #1b8b41; background-color: #f0fdf4; }
+        .card.state-present .status-badge { background-color: #1b8b41; }
+        .card.state-absent { border-color: #ef4444; background-color: #fef2f2; }
+        .card.state-absent .status-badge { background-color: #ef4444; }
+        .card.state-late { border-color: #f59e0b; background-color: #fffbeb; }
+        .card.state-late .status-badge { background-color: #f59e0b; }
+        .card.state-leave { border-color: #3b82f6; background-color: #eff6ff; }
+        .card.state-leave .status-badge { background-color: #3b82f6; }
+
+        .hint { font-size: 14px; color: #64748b; margin-top: 30px; text-align: center; }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📋 出缺席點名單</h1>
+        <div class="header-controls">
+            <div class="date-picker-container">
+                <label for="datePicker">📅 日期：</label>
+                <input type="date" id="datePicker" onchange="window.changeDate()">
+            </div>
+            <a href="https://es-d-0612237620260310-019cce22-bf0f-7d2c-93b7-dd4d9ffef56b.codepen.dev/" target="_blank" class="btn-outline">🏆 返回增強板</a>
+        </div>
+    </div>
+
+    <div class="subject-tabs" id="subjectTabs"></div>
+
+    <div class="summary-bar" id="summaryBar">
+        <div class="summary-item bg-unselected">未點: <span id="count-unselected">0</span></div>
+        <div class="summary-item bg-present">出席: <span id="count-present">0</span></div>
+        <div class="summary-item bg-absent">缺席: <span id="count-absent">0</span></div>
+        <div class="summary-item bg-late">遲到: <span id="count-late">0</span></div>
+        <div class="summary-item bg-leave">請假: <span id="count-leave">0</span></div>
+        <button class="btn-mark-all" onclick="window.markRestAsPresent()">✅ 剩下的設為出席</button>
+    </div>
+
+    <div class="board" id="board">
+        </div>
+
+    <div class="hint">💡 提示：點擊學生卡片切換狀態 (未點名 ➔ 出席 ➔ 缺席 ➔ 遲到 ➔ 請假)</div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6bp8BlMKaj8jOQPfXuCcV4hDhL2Z71sI",
+            authDomain: "classplus-fffbf.firebaseapp.com",
+            databaseURL: "https://classplus-fffbf-default-rtdb.firebaseio.com",
+            projectId: "classplus-fffbf",
+            storageBucket: "classplus-fffbf.firebasestorage.app",
+            messagingSenderId: "394393186237",
+            appId: "1:394393186237:web:f9270f60f55d140ced6cd4"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        // 讀取增強板的完整資料，才能取得科目和分配名單
+        const classBoardRef = ref(db, 'class_board_v2'); 
+        let attendanceRef; 
+        let unsubscribeAttendance = null; // 用來切換科目時解除舊的監聽
+
+        let appData = { subjects: [], subjectEnrollments: {}, students: [] };
+        let currentAttendance = {}; 
+        let currentDate = '';
+        let currentSubject = '';
+
+        const statusCycle = ['unselected', 'present', 'absent', 'late', 'leave'];
+        const statusText = {
+            'unselected': '⚪ 未點名',
+            'present': '🟢 出席',
+            'absent': '🔴 缺席',
+            'late': '🟡 遲到',
+            'leave': '🔵 請假'
+        };
+
+        function initDate() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            currentDate = `${yyyy}-${mm}-${dd}`;
+            document.getElementById('datePicker').value = currentDate;
+        }
+
+        window.changeDate = function() {
+            const newDate = document.getElementById('datePicker').value;
+            if (newDate) {
+                currentDate = newDate;
+                loadAttendance();
+            }
+        };
+
+        window.switchSubject = function(subject) {
+            currentSubject = subject;
+            renderTabs();
+            loadAttendance(); // 切換科目時，重新讀取該日該科的點名紀錄
+        };
+
+        // 🌟 更新：依據「日期 + 科目」去讀寫點名紀錄
+        function loadAttendance() {
+            if (!currentDate || !currentSubject) return;
+
+            // 如果有舊的監聽器，先解除，避免資料干擾
+            if (unsubscribeAttendance) {
+                unsubscribeAttendance();
+            }
+
+            // 路徑改為 attendance_records/日期/科目
+            attendanceRef = ref(db, `attendance_records/${currentDate}/${currentSubject}`);
+            
+            unsubscribeAttendance = onValue(attendanceRef, (snapshot) => {
+                const data = snapshot.val();
+                currentAttendance = data || {}; 
+                renderBoard(); 
+            });
+        }
+
+        // 繪製上方的科目標籤
+        function renderTabs() {
+            const tabsContainer = document.getElementById('subjectTabs');
+            tabsContainer.innerHTML = '';
+            
+            if(appData.subjects.length > 0 && (!currentSubject || !appData.subjects.includes(currentSubject))) {
+                currentSubject = appData.subjects[0]; 
+            }
+
+            appData.subjects.forEach(sub => {
+                const btn = document.createElement('button');
+                btn.className = `tab-btn ${sub === currentSubject ? 'active' : ''}`;
+                btn.textContent = sub;
+                btn.onclick = () => window.switchSubject(sub);
+                tabsContainer.appendChild(btn);
+            });
+        }
+
+        // 取得增強板的最新狀態 (包含科目與學生名單)
+        onValue(classBoardRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                appData.subjects = data.subjects ? Object.values(data.subjects) : [];
+                appData.students = data.students ? Object.values(data.students).filter(s => s !== null) : [];
+                appData.subjectEnrollments = data.subjectEnrollments || {};
+                
+                renderTabs();
+                // 第一次讀取完基礎資料後，開始去抓取當天當科的點名紀錄
+                if (currentDate === '') initDate();
+                loadAttendance();
+            }
+        });
+
+        function renderBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            if (appData.students.length === 0 || !currentSubject) {
+                board.innerHTML = '<p style="color:#64748b; font-size:18px;">請先在增強板設定好科目與學生名單</p>';
+                return;
+            }
+
+            let counts = { unselected: 0, present: 0, absent: 0, late: 0, leave: 0 };
+            
+            // 🌟 核心：只抓出該科目有勾選參與的學生
+            let enrolledIds = appData.subjectEnrollments[currentSubject] || [];
+
+            appData.students.forEach(student => {
+                // 如果這個學生沒上這個科目，就不畫他的點名卡
+                if (!enrolledIds.includes(student.id)) return;
+
+                let status = currentAttendance[student.id] || 'unselected';
+                counts[status]++;
+
+                const card = document.createElement('div');
+                card.className = `card state-${status}`;
+                card.onclick = () => window.toggleAttendance(student.id, status);
+
+                let imgHTML = student.img 
+                    ? `<img src="${student.img}" class="avatar">`
+                    : `<div class="placeholder-avatar">👤</div>`;
+
+                card.innerHTML = `
+                    ${imgHTML}
+                    <div class="name">${student.name}</div>
+                    <div class="status-badge">${statusText[status]}</div>
+                `;
+                board.appendChild(card);
+            });
+
+            document.getElementById('count-unselected').textContent = counts.unselected;
+            document.getElementById('count-present').textContent = counts.present;
+            document.getElementById('count-absent').textContent = counts.absent;
+            document.getElementById('count-late').textContent = counts.late;
+            document.getElementById('count-leave').textContent = counts.leave;
+        }
+
+        window.toggleAttendance = function(studentId, currentStatus) {
+            let currentIndex = statusCycle.indexOf(currentStatus);
+            let nextIndex = (currentIndex + 1) % statusCycle.length;
+            let nextStatus = statusCycle[nextIndex];
+
+            currentAttendance[studentId] = nextStatus;
+            
+            set(attendanceRef, currentAttendance).catch(err => console.error("寫入失敗:", err));
+        };
+
+        window.markRestAsPresent = function() {
+            let hasChanges = false;
+            let enrolledIds = appData.subjectEnrollments[currentSubject] || [];
+            
+            appData.students.forEach(student => {
+                // 只有該科目有上課的學生，才會被自動設定為出席
+                if (!enrolledIds.includes(student.id)) return;
+
+                let status = currentAttendance[student.id] || 'unselected';
+                if (status === 'unselected') {
+                    currentAttendance[student.id] = 'present';
+                    hasChanges = true;
+                }
+            });
+
+            if (hasChanges) {
+                set(attendanceRef, currentAttendance)
+                    .then(() => console.log("已一鍵完成點名"))
+                    .catch(err => console.error("寫入失敗:", err));
+            } else {
+                alert("目前沒有「未點名」的學生囉！");
+            }
+        };
+
+    </script>
+</body>
+</html>
